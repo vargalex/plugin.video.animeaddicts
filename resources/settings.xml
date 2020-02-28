@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings>
+    <category label="animeaddicts.hu bejelentkezés">
+        <setting id="felhasznalonev" type="text" label="Felhasználónév" default=""/>
+        <setting id="jelszo" type="text" option="hidden" label="Jelszó" default=""/>
+        <setting id="tmpdir" type="folder" option="writeable" label="Ideiglenes fájlok helye" default=""/>
+        <setting id="hdVideo" type="labelenum" label="Videólejátszás minősége" values="SD|HD|FHD" default="SD"/>
+        <setting id="forceDownload" type="bool" label="Lejátszás előtt töltse le a filmet" default="false"/>
+        </category>
+</settings>
