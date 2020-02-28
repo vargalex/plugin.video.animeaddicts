@@ -159,6 +159,7 @@ def play_videourl(video_url, videoname, thumbnail, referedUrl):
         tmpString = "AnimeAddicts=" + tmpCookies.get('AnimeAddicts', '') + ";AnimeAddictsCookieExpire=" + tmpCookies.get('AnimeAddictsCookieExpire', '') + ";PHPSESSID=" + tmpCookies.get('PHPSESSID', '')
         video_url = video_url + "|Cookie=" + urllib.quote_plus(tmpString)
         video_url = video_url + "&" + urllib.urlencode({'Host' : 'animeaddicts.hu', 'Referer' : referedUrl})
+        video_url = video_url + "&verifypeer=false"
         videoitem = xbmcgui.ListItem(label=videoname, thumbnailImage=baseUrl + thumbnail)
         videoitem.setInfo(type='Video', infoLabels={'Title': videoname})
         xbmc.Player().play(baseUrl + video_url, videoitem)
@@ -439,7 +440,8 @@ def build_url_sub_directory(urlToPlay):
             a = completedList[x][2].find('.html5')
            
             movieUrl = completedList[x][2]
-            movieUrl = movieUrl[:a]
+            if (a > -1):
+                movieUrl = movieUrl[:a]
             movieUrl = movieUrl.replace('view', 'request')
             if (hdVideo == 'FHD'):
                 fhdUrl = completedList[x][3]
