@@ -10,5 +10,9 @@
 		<platform>all</platform>
 		<summary>animeaddicts.hu</summary>
 		<description>Nézz filmeket az animeaddicts.hu oldalról! A működéshez szükséges, hogy regisztrálva legyél az oldalon! Nem hivatalos Animeaddicts plugin, csak a saját lustaságom miatt írtam...</description>
+		<assets>
+			<icon>icon.png</icon>
+			<fanart>fanart.jpg</fanart>
+		</assets>
 	</extension>
 </addon>
