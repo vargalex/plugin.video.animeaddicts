@@ -1,3 +1,6 @@
+V.1.4.6
+- Python3 kompatibilitás
+
 V.1.4.5
 - video url javítása
 - certificate check kikapcsolása

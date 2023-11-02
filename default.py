@@ -1,14 +1,24 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 
-import HTMLParser
 import os
 import re
 import requests, requests.utils, pickle
 import sys
 import time
-import urllib
-import urlparse
+if sys.version_info[0] == 3:
+    import html
+    from xbmcvfs import translatePath
+    from urllib.parse import quote_plus
+    from urllib.parse import urlencode
+    from urllib.parse import parse_qs
+else:
+    import HTMLParser
+    html = HTMLParser.HTMLParser()
+    from xbmc import translatePath
+    from urllib import quote_plus
+    from urllib import urlencode
+    from urlparse import parse_qs
 from contextlib import closing
 
 import xbmcaddon
@@ -18,13 +28,13 @@ import xbmcplugin
 import json
 from resources.lib.moviedb import Moviedb
 from resources.lib.movie import Movie
-from sets import Set
+from resources.lib.modules.utils import py2_encode, py2_decode
 
 dbProjectCompleted='ProjectCompleted'
 dbProjectActual='ProjectActual'
 
 addon = xbmcaddon.Addon(id='plugin.video.animeaddicts')
-thisAddonDir = xbmc.translatePath(addon.getAddonInfo('path')).decode('utf-8')
+thisAddonDir = py2_decode(translatePath(addon.getAddonInfo('path')))
 sys.path.append(os.path.join(thisAddonDir, 'resources', 'lib'))
 
 appName = 'Animeaddicts'
@@ -49,8 +59,8 @@ def newSession():
         'User-Agent': 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.6 Safari/537.36',
     })
 
-    if os.path.isfile(tmpDir + 'animeaddicts.cookies'): 
-        cookieFile = open(tmpDir + 'animeaddicts.cookies')
+    if os.path.isfile(tmpDir + 'animeaddicts.cookies'):
+        cookieFile = open(tmpDir + 'animeaddicts.cookies', 'rb')
         cookies = requests.utils.cookiejar_from_dict(pickle.load(cookieFile))
         s.cookies = cookies
         cookieFile.close()
@@ -71,12 +81,12 @@ def doLogin():
 
     content = session.post(baseUrl + 'project.php?ongoing').text
     
-    sikeres = re.compile("vagy jelentkezz be", re.MULTILINE|re.DOTALL).findall(content.encode('utf-8'))
+    sikeres = re.compile("vagy jelentkezz be", re.MULTILINE|re.DOTALL).findall(py2_encode(content))
     if (len(sikeres) > 0):
         content = session.post(baseUrl + 'log.php?login', data=postdata).text
         content = session.post(baseUrl + 'project.php?ongoing').text
 
-        sikeres = re.compile("vagy jelentkezz be", re.MULTILINE|re.DOTALL).findall(content.encode('utf-8'))
+        sikeres = re.compile("vagy jelentkezz be", re.MULTILINE|re.DOTALL).findall(py2_encode(content))
         if (len(sikeres) > 0):
             logined = False
             dialog = xbmcgui.Dialog()
@@ -84,7 +94,7 @@ def doLogin():
             sys.exit()
         else:
             logined = True
-            cookieFile = open(tmpDir + 'animeaddicts.cookies', 'w')
+            cookieFile = open(tmpDir + 'animeaddicts.cookies', 'wb')
             pickle.dump(requests.utils.dict_from_cookiejar(session.cookies), cookieFile)
             cookieFile.close();
 
@@ -137,7 +147,7 @@ def load(url, post = None, referer = None):
         return r
     else:
 #        sys.stderr.write('return text')
-        return r.encode('utf-8')
+        return py2_encode(r)
 
 def play_videourl(video_url, videoname, thumbnail, referedUrl):
     global session
@@ -145,22 +155,24 @@ def play_videourl(video_url, videoname, thumbnail, referedUrl):
     if (forceDownload == 'true'):
         retVal = load(baseUrl + video_url, None, referedUrl)
         if retVal:
-            videoitem = xbmcgui.ListItem(label=videoname, thumbnailImage=baseUrl + thumbnail)
+            videoitem = xbmcgui.ListItem(label=videoname)
+            videoitem.setArt({'thumb': baseUrl + thumbnail})
             videoitem.setInfo(type='Video', infoLabels={'Title': videoname})
             xbmc.Player().play(tmpDir + 'videocontent', videoitem)
     else:
         doLogin()
         
-        cookieFile = open(tmpDir + 'animeaddicts.cookies')
+        cookieFile = open(tmpDir + 'animeaddicts.cookies', 'rb')
         tmpCookies = requests.utils.cookiejar_from_dict(pickle.load(cookieFile))
         cookieFile.close()
     
         cookie = {'AnimeAddicts': tmpCookies.get('AnimeAddicts', ''), 'AnimeAddictsCookieExpire': tmpCookies.get('AnimeAddictsCookieExpire', ''), 'PHPSESSID': tmpCookies.get('PHPSESSID', '')}
         tmpString = "AnimeAddicts=" + tmpCookies.get('AnimeAddicts', '') + ";AnimeAddictsCookieExpire=" + tmpCookies.get('AnimeAddictsCookieExpire', '') + ";PHPSESSID=" + tmpCookies.get('PHPSESSID', '')
-        video_url = video_url + "|Cookie=" + urllib.quote_plus(tmpString)
-        video_url = video_url + "&" + urllib.urlencode({'Host' : 'animeaddicts.hu', 'Referer' : referedUrl})
+        video_url = video_url + "|Cookie=" + quote_plus(tmpString)
+        video_url = video_url + "&" + urlencode({'Host' : 'animeaddicts.hu', 'Referer' : referedUrl})
         video_url = video_url + "&verifypeer=false"
-        videoitem = xbmcgui.ListItem(label=videoname, thumbnailImage=baseUrl + thumbnail)
+        videoitem = xbmcgui.ListItem(label=videoname)
+        videoitem.setArt({'thumb': baseUrl + thumbnail})
         videoitem.setInfo(type='Video', infoLabels={'Title': videoname})
         xbmc.Player().play(baseUrl + video_url, videoitem)
     
@@ -197,9 +209,7 @@ def build_main_directory():
 
 def build_sub_directory(subDir, category, animeUrl):
     global myMoviedb
-    
-    hParser = HTMLParser.HTMLParser()
-    
+
     if (subDir[0] == 'Hasonlo'):
         url_content = load(baseUrl + animeUrl)
         completedList = re.compile("<a href='(.*?)'><img src='./theme/modules/project/review.jpg' alt='Ismertető'", re.MULTILINE).findall(url_content)
@@ -213,15 +223,15 @@ def build_sub_directory(subDir, category, animeUrl):
 
                 for x in range(0, len(completedList2)):
                     localurl = baseUrl + completedList2[x][0];
-                    localurl = "?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : localurl})
+                    localurl = "?mode=listMovieParts&" + urlencode({'urlToPlay' : localurl})
                     localurl = sys.argv[0] + localurl
                     
                     thumbnail = str(completedList2[x][1])
                     thumbnail = thumbnail.replace('_normal', '')
                     thumbnail = baseUrl + thumbnail
                     sys.stderr.write('thumbnail: ' + thumbnail)
-                    li = xbmcgui.ListItem(completedList2[x][2], iconImage=thumbnail)
-                    li.setArt({'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
+                    li = xbmcgui.ListItem(completedList2[x][2])
+                    li.setArt({'icon': thumbnail, 'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
                 
         xbmcplugin.endOfDirectory(addon_handle)
@@ -234,25 +244,25 @@ def build_sub_directory(subDir, category, animeUrl):
         if (len(completedList) > 0):
             url_content = load(baseUrl + completedList[0])
             completedList = re.compile("Közvetlenül kapcsolódó művek:</div>(.*?)</td></tr></table></div>", re.MULTILINE|re.DOTALL).findall(url_content)
-        
+
             if (len(completedList) > 0):
                 completedList2 = re.compile("<a href='(.*?)' class='tool_trigger' title='Empty'.*?src='(.*?)' alt='Főkép'.*?<strong>(.*?)</strong>", re.MULTILINE|re.DOTALL).findall(completedList[0])
 
                 for x in range(0, len(completedList2)):
                     localurl = baseUrl + completedList2[x][0];
-                    localurl = "?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : localurl})
+                    localurl = "?mode=listMovieParts&" + urlencode({'urlToPlay' : localurl})
                     localurl = sys.argv[0] + localurl
                     
                     thumbnail = str(completedList2[x][1])
                     thumbnail = thumbnail.replace('_normal', '')
                     thumbnail = baseUrl + thumbnail
                     sys.stderr.write('thumbnail: ' + thumbnail)
-                    li = xbmcgui.ListItem(completedList2[x][2], iconImage=thumbnail)
-                    li.setArt({'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
+                    li = xbmcgui.ListItem(completedList2[x][2])
+                    li.setArt({'icon': thumbnail, 'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
                 
         xbmcplugin.endOfDirectory(addon_handle)
-        return 
+        return
 
     if (subDir[0].startswith('Sajatlista_')):
         url_content = load(baseUrl + '/news.php?news')
@@ -284,14 +294,14 @@ def build_sub_directory(subDir, category, animeUrl):
             completedList = re.compile("<td  style='width:58px;'>.*?<a href='(.*?)'>.*?<img src='(.*?)' alt='(.*?)'", re.MULTILINE|re.DOTALL).findall(url_content)
             for x in range(0, len(completedList)):
                 localurl = completedList[x][0];
-                localurl = "?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : localurl})
+                localurl = "?mode=listMovieParts&" + urlencode({'urlToPlay' : localurl})
                 localurl = sys.argv[0] + localurl
-                
+
                 thumbnail = str(completedList[x][1])
                 thumbnail = thumbnail.replace('_thumb', '')
                 thumbnail = baseUrl + thumbnail
-                li = xbmcgui.ListItem(completedList[x][2], iconImage=thumbnail)
-                li.setArt({'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
+                li = xbmcgui.ListItem(completedList[x][2])
+                li.setArt({'icon': thumbnail, 'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
                 
         xbmcplugin.endOfDirectory(addon_handle)
@@ -299,35 +309,42 @@ def build_sub_directory(subDir, category, animeUrl):
 
     if (subDir[0] == 'Sajatlista'):
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Befejezett'
-        li = xbmcgui.ListItem('Befejezett', iconImage=thisAddonDir + '/resources/ok_gray_32.png')
+        li = xbmcgui.ListItem('Befejezett')
+        li.setArt({'icon': thisAddonDir + '/resources/ok_gray_32.png'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Aktualis'
-        li = xbmcgui.ListItem('Aktuális', iconImage=thisAddonDir + '/resources/watch_48.png')
+        li = xbmcgui.ListItem('Aktuális')
+        li.setArt({'icon': thisAddonDir + '/resources/watch_48.png'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-        
+
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Tervezett'
-        li = xbmcgui.ListItem('Tervezett', iconImage=thisAddonDir + '/resources/towatch_48.png')
+        li = xbmcgui.ListItem('Tervezett')
+        li.setArt({'icon': thisAddonDir + '/resources/towatch_48.png'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-        
+
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Felfuggesztett'
-        li = xbmcgui.ListItem('Felfüggesztett', iconImage=thisAddonDir + '/resources/stalled_48.png')
+        li = xbmcgui.ListItem('Felfüggesztett')
+        li.setArt({'icon': thisAddonDir + '/resources/stalled_48.png'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-        
+
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Dobott'
-        li = xbmcgui.ListItem('Dobott', iconImage=thisAddonDir + '/resources/dropped_48.png')
+        li = xbmcgui.ListItem('Dobott')
+        li.setArt({'icon': thisAddonDir + '/resources/dropped_48.png'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-        
+
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Kedvenc'
-        li = xbmcgui.ListItem('Kedvenc', iconImage=thisAddonDir + '/resources/favourite_48.png')
+        li = xbmcgui.ListItem('Kedvenc')
+        li.setArt({'icon': thisAddonDir + '/resources/favourite_48.png'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-        
+
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Utalt'
-        li = xbmcgui.ListItem('Utált', iconImage=thisAddonDir + '/resources/hated_48.png')
+        li = xbmcgui.ListItem('Utált')
+        li.setArt({'icon': thisAddonDir + '/resources/hated_48.png'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         xbmcplugin.endOfDirectory(addon_handle)
-        return 
+        return
 
     if (subDir[0] == 'Kereses'):
         kb=xbmc.Keyboard('', 'Keresés', False)
@@ -335,21 +352,21 @@ def build_sub_directory(subDir, category, animeUrl):
         if (kb.isConfirmed()):
             searchText = kb.getText()
             for movie in myMoviedb.movies:
-                if re.search(searchText.decode('utf-8'), movie.name, re.IGNORECASE):
-                    li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
+                if re.search(py2_decode(searchText), movie.name, re.IGNORECASE):
+                    li = xbmcgui.ListItem(movie.name)
                     info = {
                         'genre': movie.genre,
                         'year': movie.year,
                         'title': movie.title,
                     }
                     li.setInfo('video', info)
-                    li.setArt({'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
+                    li.setArt({'icon': baseUrl + movie.thumbnailurl, 'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
             xbmcplugin.endOfDirectory(addon_handle)
         return 
 
     if (subDir[0] == 'Kategoria'):
-        categories = Set()
+        categories = set()
         for movie in myMoviedb.movies:
             for cat in movie.categories:
                 categories.add(cat)
@@ -357,7 +374,7 @@ def build_sub_directory(subDir, category, animeUrl):
         categories = sorted(categories)
         
         for cat in categories:
-            localurl = sys.argv[0]+'?mode=changeDir&dirName=KategorianBelul&' + urllib.urlencode({'category' : cat.encode('utf-8')}) 
+            localurl = sys.argv[0]+'?mode=changeDir&dirName=KategorianBelul&' + urlencode({'category' : py2_encode(cat)}) 
             li = xbmcgui.ListItem(cat)
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
     
@@ -367,21 +384,21 @@ def build_sub_directory(subDir, category, animeUrl):
     if (subDir[0] == 'KategorianBelul'):
         for movie in myMoviedb.movies:
             for cat in movie.categories:
-                if cat == category[0].decode('utf-8'):
-                    li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
+                if cat == py2_decode(category[0]):
+                    li = xbmcgui.ListItem(movie.name)
                     info = {
                         'genre': movie.genre,
                         'year': movie.year,
                         'title': movie.title,
                     }
                     li.setInfo('video', info)
-                    li.setArt({'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
-                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
+                    li.setArt({'icon': baseUrl + movie.thumbnailurl, 'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
+                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)
         xbmcplugin.endOfDirectory(addon_handle)
         return
 
     if (subDir[0] == 'ClearDB'):
-        myMoviedb = Moviedb()    
+        myMoviedb = Moviedb()
         update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
         update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
         fetch_movie_db()
@@ -389,15 +406,15 @@ def build_sub_directory(subDir, category, animeUrl):
     
     if (subDir[0] == 'Befejezett'):
         for movie in myMoviedb.movies:
-            if movie.projectstatus == dbProjectCompleted.decode('utf-8'):
-                li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
+            if movie.projectstatus == py2_decode(dbProjectCompleted):
+                li = xbmcgui.ListItem(movie.name)
                 info = {
                     'genre': movie.genre,
                     'year': movie.year,
                     'title': movie.title,
                 }
                 li.setInfo('video', info)
-                li.setArt({'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
+                li.setArt({'icon': baseUrl + movie.thumbnailurl, 'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
         
         xbmcplugin.endOfDirectory(addon_handle)
@@ -405,15 +422,15 @@ def build_sub_directory(subDir, category, animeUrl):
 
     if (subDir[0] == 'Aktualis'):
         for movie in myMoviedb.movies:
-            if movie.projectstatus == dbProjectActual.decode('utf-8'):
-                li = xbmcgui.ListItem(movie.name, iconImage=baseUrl + movie.thumbnailurl, thumbnailImage = baseUrl + movie.thumbnailurl, )
+            if movie.projectstatus == py2_decode(dbProjectActual):
+                li = xbmcgui.ListItem(movie.name)
                 info = {
                     'genre': movie.genre,
                     'year': movie.year,
                     'title': movie.title,
                 }
                 li.setInfo('video', info)
-                li.setArt({'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
+                li.setArt({'icon': baseUrl + movie.thumbnailurl, 'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
         
         xbmcplugin.endOfDirectory(addon_handle)
@@ -431,12 +448,11 @@ def build_url_sub_directory(urlToPlay):
 
     url_content = load(baseUrl + urlToPlay)
     completedList = re.compile("<div style='width:100px;height:75px;background:#000 url[(](.*?)[)].*?<h1 style='margin-bottom:5px;'>(.*?)</h1>.*?<a href='(.*?)'><img src=.*?<a href='(.*?)'.*?<a href='(.*?)'", re.MULTILINE|re.DOTALL).findall(url_content)
-    
-    hParser = HTMLParser.HTMLParser()
 
     if (len(completedList) > 0):
         for x in range(0, len(completedList)):
-            li = xbmcgui.ListItem(hParser.unescape(completedList[x][1].decode('utf-8')), iconImage=baseUrl + completedList[x][0])
+            li = xbmcgui.ListItem(html.unescape(py2_decode(completedList[x][1])))
+            li.setArt({'icon': baseUrl + completedList[x][0]})
             a = completedList[x][2].find('.html5')
            
             movieUrl = completedList[x][2]
@@ -451,13 +467,13 @@ def build_url_sub_directory(urlToPlay):
             if (hdVideo == 'SD'):
                 movieUrl = movieUrl + '.SD'
 
-            xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+"?mode=playUrl&" + urllib.urlencode({'urlToPlay' : movieUrl}) + "&" + urllib.urlencode({'referedUrl' : baseUrl + urlToPlay}) + "&" + urllib.urlencode({'videoName' : completedList[x][1]}) + "&" + urllib.urlencode({'videoThumbnail' : completedList[x][0]}), listitem=li, isFolder=True)
+            xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+"?mode=playUrl&" + urlencode({'urlToPlay' : movieUrl}) + "&" + urlencode({'referedUrl' : baseUrl + urlToPlay}) + "&" + urlencode({'videoName' : completedList[x][1]}) + "&" + urlencode({'videoThumbnail' : completedList[x][0]}), listitem=li, isFolder=True)
 
-    localurl = sys.argv[0]+'?mode=changeDir&dirName=Kapcsolodo&' + urllib.urlencode({'urlToPlay' : urlToPlay})
+    localurl = sys.argv[0]+'?mode=changeDir&dirName=Kapcsolodo&' + urlencode({'urlToPlay' : urlToPlay})
     li = xbmcgui.ListItem('Közvetlenül kapcsolódó művek')
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
-    localurl = sys.argv[0]+'?mode=changeDir&dirName=Hasonlo&' + urllib.urlencode({'urlToPlay' : urlToPlay})
+    localurl = sys.argv[0]+'?mode=changeDir&dirName=Hasonlo&' + urlencode({'urlToPlay' : urlToPlay})
     li = xbmcgui.ListItem('Hasonlónak jelölt művek',)
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
         
@@ -471,21 +487,20 @@ def update_movie_db(url, projectStatus):
     
     url_content = load(url)
     completedList = re.compile("<h1><a href='(.*?)'>(.*?)</a></h1>.*?<img src='(.*?)'.*?<strong>(Frissítve|Befejezve):</strong>(.*?)<.*?<span style='font-size:.*?;'>(.*?)<", re.MULTILINE|re.DOTALL).findall(url_content)
-    hParser = HTMLParser.HTMLParser()
         
     if (len(completedList) > 0):
         for x in range(0, len(completedList)):
-            name = hParser.unescape(completedList[x][1].decode('utf-8'))
+            name = html.unescape(py2_decode(completedList[x][1]))
             url = completedList[x][0];
-            a = url.find('\'')            
+            a = url.find('\'')
             if (a > -1):
                 url = url[:a]
-            
-            url = "?mode=listMovieParts&" + urllib.urlencode({'urlToPlay' : url})
+
+            url = "?mode=listMovieParts&" + urlencode({'urlToPlay' : url})
             url = sys.argv[0] + url
-            
-            genre = completedList[x][5].decode('utf-8')
-            year = completedList[x][4].strip()[:4].decode('utf-8')
+
+            genre = py2_decode(completedList[x][5])
+            year = py2_decode(completedList[x][4].strip()[:4])
             thumburl = completedList[x][2]
             
             myMovie = Movie(name, url, genre, year, '', thumburl, projectStatus) 
@@ -509,9 +524,9 @@ def fetch_movie_db():
         os.remove(tmpDir + 'animeaddicts.db')
     except:
         pass
-    
+
     try:
-        dbFile = open(tmpDir + 'animeaddicts.db', 'w')
+        dbFile = open(tmpDir + 'animeaddicts.db', 'wb')
         pickle.dump(myMoviedb, dbFile)
         dbFile.close()
     except:
@@ -522,7 +537,7 @@ def fetch_movie_db():
 # main...
 base_url = sys.argv[0]
 addon_handle = int(sys.argv[1])
-args = urlparse.parse_qs(sys.argv[2][1:])
+args = parse_qs(sys.argv[2][1:])
 
 xbmcplugin.setContent(addon_handle, 'movies')
 
@@ -536,7 +551,7 @@ videoThumbnail = args.get('videoThumbnail', None)
 
 myMoviedb = Moviedb()
 try:
-    dbFile = open(tmpDir + 'animeaddicts.db', 'r')
+    dbFile = open(tmpDir + 'animeaddicts.db', 'rb')
     myMoviedb = pickle.load(dbFile)
     dbFile.close()
 except:
