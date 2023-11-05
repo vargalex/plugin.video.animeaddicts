@@ -37,7 +37,9 @@ addon = xbmcaddon.Addon(id='plugin.video.animeaddicts')
 thisAddonDir = py2_decode(translatePath(addon.getAddonInfo('path')))
 sys.path.append(os.path.join(thisAddonDir, 'resources', 'lib'))
 
-appName = 'Animeaddicts'
+userDataDir = py2_decode(translatePath(addon.getAddonInfo('profile')))
+
+appName = 'AnimeAddicts'
 logined = False
 
 baseUrl = 'http://animeaddicts.hu/'
@@ -49,7 +51,7 @@ hdVideo = addon.getSetting('hdVideo')
 forceDownload = addon.getSetting('forceDownload')
 if (felhasznalo == "" or jelszo == "" or tmpDir == ""):
     dialog = xbmcgui.Dialog()
-    dialog.ok("Hiba!", "Nem végezted el a beállításokat!", "", "")
+    dialog.ok("Hiba!", "Nem végezted el a beállításokat!")
     addon.openSettings()
     sys.exit()
 
@@ -59,8 +61,8 @@ def newSession():
         'User-Agent': 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.6 Safari/537.36',
     })
 
-    if os.path.isfile(tmpDir + 'animeaddicts.cookies'):
-        cookieFile = open(tmpDir + 'animeaddicts.cookies', 'rb')
+    if os.path.isfile(userDataDir + '/animeaddicts.cookies'):
+        cookieFile = open(userDataDir + '/animeaddicts.cookies', 'rb')
         cookies = requests.utils.cookiejar_from_dict(pickle.load(cookieFile))
         s.cookies = cookies
         cookieFile.close()
@@ -80,7 +82,7 @@ def doLogin():
                 }
 
     content = session.post(baseUrl + 'project.php?ongoing').text
-    
+
     sikeres = re.compile("vagy jelentkezz be", re.MULTILINE|re.DOTALL).findall(py2_encode(content))
     if (len(sikeres) > 0):
         content = session.post(baseUrl + 'log.php?login', data=postdata).text
@@ -90,11 +92,11 @@ def doLogin():
         if (len(sikeres) > 0):
             logined = False
             dialog = xbmcgui.Dialog()
-            dialog.ok("Hiba!", "Helytelen felhasználónév, vagy jelszó!", "Esetleg megjelent az I'm not a robot captcha.", "Várj egy ideig, esetleg próbáld meg böngészőből!")
+            dialog.ok("Hiba!", "Helytelen felhasználónév, vagy jelszó!\nEsetleg megjelent az I'm not a robot captcha.\nVárj egy ideig, esetleg próbáld meg böngészőből!")
             sys.exit()
         else:
             logined = True
-            cookieFile = open(tmpDir + 'animeaddicts.cookies', 'wb')
+            cookieFile = open(userDataDir + '/animeaddicts.cookies', 'wb')
             pickle.dump(requests.utils.dict_from_cookiejar(session.cookies), cookieFile)
             cookieFile.close();
 
@@ -108,7 +110,7 @@ def load(url, post = None, referer = None):
         session.headers.update({
         'Host': 'animeaddicts.hu',
         'Referer': referer
-    })     
+    })
 
     r = ""
     try:
@@ -134,7 +136,7 @@ def load(url, post = None, referer = None):
                 return "DONE"
             else:
                r = session.get(url).text
-            
+
     except AttributeError:
         xbmc.executebuiltin("HIBA: {0}".format(AttributeError.message))
         if post:
@@ -161,11 +163,11 @@ def play_videourl(video_url, videoname, thumbnail, referedUrl):
             xbmc.Player().play(tmpDir + 'videocontent', videoitem)
     else:
         doLogin()
-        
-        cookieFile = open(tmpDir + 'animeaddicts.cookies', 'rb')
+
+        cookieFile = open(userDataDir + '/animeaddicts.cookies', 'rb')
         tmpCookies = requests.utils.cookiejar_from_dict(pickle.load(cookieFile))
         cookieFile.close()
-    
+
         cookie = {'AnimeAddicts': tmpCookies.get('AnimeAddicts', ''), 'AnimeAddictsCookieExpire': tmpCookies.get('AnimeAddictsCookieExpire', ''), 'PHPSESSID': tmpCookies.get('PHPSESSID', '')}
         tmpString = "AnimeAddicts=" + tmpCookies.get('AnimeAddicts', '') + ";AnimeAddictsCookieExpire=" + tmpCookies.get('AnimeAddictsCookieExpire', '') + ";PHPSESSID=" + tmpCookies.get('PHPSESSID', '')
         video_url = video_url + "|Cookie=" + quote_plus(tmpString)
@@ -175,34 +177,39 @@ def play_videourl(video_url, videoname, thumbnail, referedUrl):
         videoitem.setArt({'thumb': baseUrl + thumbnail})
         videoitem.setInfo(type='Video', infoLabels={'Title': videoname})
         xbmc.Player().play(baseUrl + video_url, videoitem)
-    
+
     return
 
 def build_main_directory():
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Befejezett'
     li = xbmcgui.ListItem('Befejezett')
+    li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Aktualis'
     li = xbmcgui.ListItem('Aktuális')
+    li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Kategoria'
     li = xbmcgui.ListItem('Kategóriák')
+    li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista'
     li = xbmcgui.ListItem('Saját listák')
+    li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Kereses'
     li = xbmcgui.ListItem('Keresés')
+    li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
     localurl = sys.argv[0]+'?mode=changeDir&dirName=ClearDB'
     li = xbmcgui.ListItem('Adatbázis frissítése')
+    li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-    
 
     xbmcplugin.endOfDirectory(addon_handle)
     return
@@ -217,7 +224,7 @@ def build_sub_directory(subDir, category, animeUrl):
         if (len(completedList) > 0):
             url_content = load(baseUrl + completedList[0])
             completedList = re.compile("Hasonlónak jelölt művek:(.*?)</div></tr></table></div>", re.MULTILINE|re.DOTALL).findall(url_content)
-        
+
             if (len(completedList) > 0):
                 completedList2 = re.compile("<a href='(.*?)' class='tool_trigger' title='Empty'.*?src='(.*?)' alt='Főkép'.*?<strong>(.*?)</strong>", re.MULTILINE|re.DOTALL).findall(completedList[0])
 
@@ -225,7 +232,7 @@ def build_sub_directory(subDir, category, animeUrl):
                     localurl = baseUrl + completedList2[x][0];
                     localurl = "?mode=listMovieParts&" + urlencode({'urlToPlay' : localurl})
                     localurl = sys.argv[0] + localurl
-                    
+
                     thumbnail = str(completedList2[x][1])
                     thumbnail = thumbnail.replace('_normal', '')
                     thumbnail = baseUrl + thumbnail
@@ -233,9 +240,9 @@ def build_sub_directory(subDir, category, animeUrl):
                     li = xbmcgui.ListItem(completedList2[x][2])
                     li.setArt({'icon': thumbnail, 'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-                
+
         xbmcplugin.endOfDirectory(addon_handle)
-        return 
+        return
 
     if (subDir[0] == 'Kapcsolodo'):
         url_content = load(baseUrl + animeUrl)
@@ -252,15 +259,15 @@ def build_sub_directory(subDir, category, animeUrl):
                     localurl = baseUrl + completedList2[x][0];
                     localurl = "?mode=listMovieParts&" + urlencode({'urlToPlay' : localurl})
                     localurl = sys.argv[0] + localurl
-                    
+
                     thumbnail = str(completedList2[x][1])
                     thumbnail = thumbnail.replace('_normal', '')
                     thumbnail = baseUrl + thumbnail
                     sys.stderr.write('thumbnail: ' + thumbnail)
                     li = xbmcgui.ListItem(completedList2[x][2])
-                    li.setArt({'icon': thumbnail, 'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
+                    li.setArt({'icon': thumbnail, 'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})
                     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-                
+
         xbmcplugin.endOfDirectory(addon_handle)
         return
 
@@ -269,7 +276,7 @@ def build_sub_directory(subDir, category, animeUrl):
         completedList = re.compile("<a href='encyclopedia.php\?mylist.(.*?).anime.saw'", re.MULTILINE|re.DOTALL).findall(url_content)
         if (len(completedList) > 0):
             userID = str(completedList[0])
-            
+
             if (subDir[0].endswith('Befejezett')):
                 url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.saw')
 
@@ -290,7 +297,7 @@ def build_sub_directory(subDir, category, animeUrl):
 
             if (subDir[0].endswith('Utalt')):
                 url_content = load(baseUrl + 'encyclopedia.php?mylist.' + userID + '.anime.hated')
-                
+
             completedList = re.compile("<td  style='width:58px;'>.*?<a href='(.*?)'>.*?<img src='(.*?)' alt='(.*?)'", re.MULTILINE|re.DOTALL).findall(url_content)
             for x in range(0, len(completedList)):
                 localurl = completedList[x][0];
@@ -301,46 +308,46 @@ def build_sub_directory(subDir, category, animeUrl):
                 thumbnail = thumbnail.replace('_thumb', '')
                 thumbnail = baseUrl + thumbnail
                 li = xbmcgui.ListItem(completedList[x][2])
-                li.setArt({'icon': thumbnail, 'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})                
+                li.setArt({'icon': thumbnail, 'thumb': thumbnail, 'poster': thumbnail, 'fanart': thumbnail})
                 xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-                
+
         xbmcplugin.endOfDirectory(addon_handle)
-        return 
+        return
 
     if (subDir[0] == 'Sajatlista'):
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Befejezett'
         li = xbmcgui.ListItem('Befejezett')
-        li.setArt({'icon': thisAddonDir + '/resources/ok_gray_32.png'})
+        li.setArt({'icon': thisAddonDir + '/resources/ok_gray_256.png', 'fanart': thisAddonDir + '/fanart.jpg'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Aktualis'
         li = xbmcgui.ListItem('Aktuális')
-        li.setArt({'icon': thisAddonDir + '/resources/watch_48.png'})
+        li.setArt({'icon': thisAddonDir + '/resources/watch_256.png', 'fanart': thisAddonDir + '/fanart.jpg'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Tervezett'
         li = xbmcgui.ListItem('Tervezett')
-        li.setArt({'icon': thisAddonDir + '/resources/towatch_48.png'})
+        li.setArt({'icon': thisAddonDir + '/resources/towatch_256.png', 'fanart': thisAddonDir + '/fanart.jpg'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Felfuggesztett'
         li = xbmcgui.ListItem('Felfüggesztett')
-        li.setArt({'icon': thisAddonDir + '/resources/stalled_48.png'})
+        li.setArt({'icon': thisAddonDir + '/resources/stalled_256.png', 'fanart': thisAddonDir + '/fanart.jpg'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Dobott'
         li = xbmcgui.ListItem('Dobott')
-        li.setArt({'icon': thisAddonDir + '/resources/dropped_48.png'})
+        li.setArt({'icon': thisAddonDir + '/resources/dropped_256.png', 'fanart': thisAddonDir + '/fanart.jpg'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Kedvenc'
         li = xbmcgui.ListItem('Kedvenc')
-        li.setArt({'icon': thisAddonDir + '/resources/favourite_48.png'})
+        li.setArt({'icon': thisAddonDir + '/resources/favourite_256.png', 'fanart': thisAddonDir + '/fanart.jpg'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         localurl = sys.argv[0]+'?mode=changeDir&dirName=Sajatlista_Utalt'
         li = xbmcgui.ListItem('Utált')
-        li.setArt({'icon': thisAddonDir + '/resources/hated_48.png'})
+        li.setArt({'icon': thisAddonDir + '/resources/hated_256.png', 'fanart': thisAddonDir + '/fanart.jpg'})
         xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
         xbmcplugin.endOfDirectory(addon_handle)
@@ -361,7 +368,7 @@ def build_sub_directory(subDir, category, animeUrl):
                     }
                     li.setInfo('video', info)
                     li.setArt({'icon': baseUrl + movie.thumbnailurl, 'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
-                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
+                    xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)
             xbmcplugin.endOfDirectory(addon_handle)
         return 
 
@@ -370,14 +377,14 @@ def build_sub_directory(subDir, category, animeUrl):
         for movie in myMoviedb.movies:
             for cat in movie.categories:
                 categories.add(cat)
-        
+
         categories = sorted(categories)
-        
         for cat in categories:
             localurl = sys.argv[0]+'?mode=changeDir&dirName=KategorianBelul&' + urlencode({'category' : py2_encode(cat)}) 
             li = xbmcgui.ListItem(cat)
+            li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
             xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-    
+
         xbmcplugin.endOfDirectory(addon_handle)
         return 
 
@@ -403,7 +410,7 @@ def build_sub_directory(subDir, category, animeUrl):
         update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
         fetch_movie_db()
         return
-    
+
     if (subDir[0] == 'Befejezett'):
         for movie in myMoviedb.movies:
             if movie.projectstatus == py2_decode(dbProjectCompleted):
@@ -415,10 +422,10 @@ def build_sub_directory(subDir, category, animeUrl):
                 }
                 li.setInfo('video', info)
                 li.setArt({'icon': baseUrl + movie.thumbnailurl, 'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
-                xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
-        
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)
+
         xbmcplugin.endOfDirectory(addon_handle)
-        return 
+        return
 
     if (subDir[0] == 'Aktualis'):
         for movie in myMoviedb.movies:
@@ -431,10 +438,10 @@ def build_sub_directory(subDir, category, animeUrl):
                 }
                 li.setInfo('video', info)
                 li.setArt({'icon': baseUrl + movie.thumbnailurl, 'thumb': baseUrl + movie.thumbnailurl, 'poster': baseUrl + movie.thumbnailurl, 'fanart': baseUrl + movie.thumbnailurl})
-                xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)            
-        
+                xbmcplugin.addDirectoryItem(handle=addon_handle, url=sys.argv[0]+movie.url, listitem=li, isFolder=True)
+
         xbmcplugin.endOfDirectory(addon_handle)
-        return 
+        return
     return
 
 def build_url_sub_directory(urlToPlay):
@@ -454,14 +461,14 @@ def build_url_sub_directory(urlToPlay):
             li = xbmcgui.ListItem(html.unescape(py2_decode(completedList[x][1])))
             li.setArt({'icon': baseUrl + completedList[x][0]})
             a = completedList[x][2].find('.html5')
-           
+
             movieUrl = completedList[x][2]
             if (a > -1):
                 movieUrl = movieUrl[:a]
             movieUrl = movieUrl.replace('view', 'request')
             if (hdVideo == 'FHD'):
                 fhdUrl = completedList[x][3]
-                sys.stderr.write('fhdUrl: ' + fhdUrl)                                      
+                sys.stderr.write('fhdUrl: ' + fhdUrl)
                 if (fhdUrl.find('.FD') > -1):
                     movieUrl = movieUrl + '.FD'
             if (hdVideo == 'SD'):
@@ -471,12 +478,14 @@ def build_url_sub_directory(urlToPlay):
 
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Kapcsolodo&' + urlencode({'urlToPlay' : urlToPlay})
     li = xbmcgui.ListItem('Közvetlenül kapcsolódó művek')
+    li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
 
     localurl = sys.argv[0]+'?mode=changeDir&dirName=Hasonlo&' + urlencode({'urlToPlay' : urlToPlay})
     li = xbmcgui.ListItem('Hasonlónak jelölt művek',)
+    li.setArt({'icon': thisAddonDir + '/icon.png', 'fanart': thisAddonDir + '/fanart.jpg'})
     xbmcplugin.addDirectoryItem(handle=addon_handle, url=localurl, listitem=li, isFolder=True)
-        
+
     xbmcplugin.endOfDirectory(addon_handle)
 
     return
@@ -484,10 +493,10 @@ def build_url_sub_directory(urlToPlay):
 
 def update_movie_db(url, projectStatus):
     global myMoviedb
-    
+
     url_content = load(url)
     completedList = re.compile("<h1><a href='(.*?)'>(.*?)</a></h1>.*?<img src='(.*?)'.*?<strong>(Frissítve|Befejezve):</strong>(.*?)<.*?<span style='font-size:.*?;'>(.*?)<", re.MULTILINE|re.DOTALL).findall(url_content)
-        
+
     if (len(completedList) > 0):
         for x in range(0, len(completedList)):
             name = html.unescape(py2_decode(completedList[x][1]))
@@ -502,16 +511,16 @@ def update_movie_db(url, projectStatus):
             genre = py2_decode(completedList[x][5])
             year = py2_decode(completedList[x][4].strip()[:4])
             thumburl = completedList[x][2]
-            
-            myMovie = Movie(name, url, genre, year, '', thumburl, projectStatus) 
-            
+
+            myMovie = Movie(name, url, genre, year, '', thumburl, projectStatus)
+
             categories = genre.split(',')
             if (len(categories) > 0):
                 for y in range(0, len(categories)):
                     category = categories[y].strip()
                     if (len(category) > 0):
                         myMovie.addCategory(category)
-                        
+
             myMoviedb.addMovie(myMovie)
     return
 
@@ -521,18 +530,16 @@ def fetch_movie_db():
     sys.stderr.write('Refresh animeaddicts database...')
 
     try:
-        os.remove(tmpDir + 'animeaddicts.db')
+        os.remove(userDataDir + '/animeaddicts.db')
     except:
         pass
 
     try:
-        dbFile = open(tmpDir + 'animeaddicts.db', 'wb')
+        dbFile = open(userDataDir + '/animeaddicts.db', 'wb')
         pickle.dump(myMoviedb, dbFile)
         dbFile.close()
     except:
         pass
-
-
 
 # main...
 base_url = sys.argv[0]
@@ -551,7 +558,7 @@ videoThumbnail = args.get('videoThumbnail', None)
 
 myMoviedb = Moviedb()
 try:
-    dbFile = open(tmpDir + 'animeaddicts.db', 'rb')
+    dbFile = open(userDataDir + '/animeaddicts.db', 'rb')
     myMoviedb = pickle.load(dbFile)
     dbFile.close()
 except:
@@ -559,7 +566,7 @@ except:
 
 
 if myMoviedb.isSyncNeed():
-    myMoviedb = Moviedb()    
+    myMoviedb = Moviedb()
     update_movie_db(baseUrl + 'project.php?completed.jap', dbProjectCompleted)
     update_movie_db(baseUrl + 'project.php?ongoing.jap', dbProjectActual)
     fetch_movie_db()
@@ -571,7 +578,7 @@ elif mode[0] == 'changeDir':
     if (urlToPlay is None):
         build_sub_directory(subDir, category, '')
     else:
-        build_sub_directory(subDir, category, urlToPlay[0])        
+        build_sub_directory(subDir, category, urlToPlay[0])
 elif mode[0] == 'listMovieParts':
     build_url_sub_directory(urlToPlay[0])
 elif mode[0] == 'openSetup':

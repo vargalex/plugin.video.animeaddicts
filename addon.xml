@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<addon id="plugin.video.animeaddicts" name="Animeaddicts" version="1.4.7" provider-name="KIZS">
+<addon id="plugin.video.animeaddicts" name="AnimeAddicts" version="1.4.8" provider-name="KIZS, vargalex, dtech">
 	<requires>
 		<import addon="script.module.requests"/>
 	</requires>
@@ -9,7 +9,7 @@
 	<extension point="xbmc.addon.metadata">
 		<platform>all</platform>
 		<summary>animeaddicts.hu</summary>
-		<description>Nézz filmeket az animeaddicts.hu oldalról! A működéshez szükséges, hogy regisztrálva legyél az oldalon! Nem hivatalos Animeaddicts plugin, csak a saját lustaságom miatt írtam...</description>
+		<description>Nézz filmeket az animeaddicts.hu oldalról! A működéshez szükséges, hogy regisztrálva legyél az oldalon! Nem hivatalos AnimeAddicts plugin, csak a saját lustaságom miatt írtam...</description>
 		<assets>
 			<icon>icon.png</icon>
 			<fanart>fanart.jpg</fanart>

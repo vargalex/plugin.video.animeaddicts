@@ -1,3 +1,14 @@
+V.1.4.8
+- Addon beépített képeinek cseréje jobb minőségűekre
+- További közreműködők neveinek hozzáadása az addon.xml-hez
+- Addon kódjának tisztítása, hiányzó ikonok és fanart-ok hozzáadása
+- Bejelentkezésre figyelmeztető üzenet hibájának javítása
+- Az addon nevében lévő typo javítva (helyesen: AnimeAddicts)
+- Cookie és adatbázis fájlok áthelyezése a userdata könyvtárba
+
+V.1.4.7
+- Ikon és fanart javítása
+
 V.1.4.6
 - Python3 kompatibilitás
 
